@@ -1,1 +1,0 @@
-##Introduction to DirectX Raytracing
