@@ -16,45 +16,51 @@ Chris Wyman
 
 # Contents
 
-## Part I: Ray Tracing Basics 5
 [序言](Preface.md)  
 [前言](Foreword.md)  
-1 Ray Tracing Terminology 7  
-1.1 Historical Notes   
-1.2 Definitions 8  
-2 What is a Ray? 13  
-2.1 Mathematical Description of a Ray 13  
-2.2 Ray Intervals 14  
-2.3 Rays in DXR 15  
-2.4 Conclusion 16  
-3 Introduction to DirectX Raytracing 17  
-3.1 Introduction 17  
-3.2 Overview 18  
-3.3 Getting Started18  
-3.4 The DirectX Raytracing Pipeline 19  
-3.5 New HLSL Support for DirectX Raytracing 20  
-3.6 A Simple HLSL Ray Tracing Example 23  
-3.7 Overview of Host Initialization for DirectX Raytracing   
-3.8 Basic DXR Initialization and Setup 25  
-3.9 Ray Tracing Pipeline State Objects 30  
-3.10 Shader Tables 33  
-3.11 Dispatching Rays35  
-3.12 Digging Deeper and Additional Resources 36  
-3.13 Conclusion 37  
-4 A Planetarium Dome Master Camera 39  
-4.1 Introduction 39  
-4.2 Methods 39  
-4.3 Planetarium Dome Master Projection Sample Code 46  
-5 Computing Minima and Maxima of Subarrays 49  
-5.1 Motivation 49  
-5.2 Naive Full Table Lookup 50  
-5.3 The Sparse Table Method 50  
-5.4 The (Recursive) Range Tree Method 52  
-5.5 Iterative Range Tree Queries 52  
-5.6 Results 55  
-5.7 Summary 55  
+
+[表示方法](Notation.md)
+
+## [Part I: Ray Tracing Basics](Part I Ray Tracing Basics.md)
+### 1 [Ray Tracing Terminology](Ray Tracing Terminology.md)   
+  1.1 Historical Notes   
+  1.2 Definitions   
+
+### 2 [What is a Ray?](What is a Ray.md)   
+  2.1 Mathematical Description of a Ray   
+  2.2 Ray Intervals   
+  2.3 Rays in DXR   
+  2.4 Conclusion  
+
+### 3 Introduction to DirectX Raytracing  
+  3.1 Introduction   
+  3.2 Overview   
+  3.3 Getting Started  
+  3.4 The DirectX Raytracing Pipeline   
+  3.5 New HLSL Support for DirectX Raytracing   
+  3.6 A Simple HLSL Ray Tracing Example 23  
+  3.7 Overview of Host Initialization for DirectX Raytracing   
+  3.8 Basic DXR Initialization and Setup   
+  3.9 Ray Tracing Pipeline State Objects   
+  3.10 Shader Tables   
+  3.11 Dispatching Rays  
+  3.12 Digging Deeper and Additional Resources   
+  3.13 Conclusion   
+### 4 A Planetarium Dome Master Camera   
+  4.1 Introduction   
+  4.2 Methods   
+  4.3 Planetarium Dome Master Projection Sample Code   
+### 5 Computing Minima and Maxima of Subarrays   
+ 5.1 Motivation   
+####  Naive Full Table Lookup   
+#### 5. e Sparse Table Method   
+#### 5. e (Recursive) Range Tree Method   
+#### 5. erative Range Tree Queries   
+#### 5. sults   
+#### 5. mmary   
+
 ## Part II: Intersections and Efficiency 
-6 A Fast and Robust Method for Avoiding  
+### 6 A Fast and Robust Method for Avoiding  
 Self-Intersection 63  
 6.1 Introduction 63  
 6.2 Method 63  
