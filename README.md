@@ -21,12 +21,12 @@ Chris Wyman
 
 [表示方法](Notation.md)
 
-## [Part I: Ray Tracing Basics](Part I Ray Tracing Basics.md)
-### 1 [Ray Tracing Terminology](Ray Tracing Terminology.md)   
+## [Part I: Ray Tracing Basics] (Part I Ray Tracing Basics.md)
+### 1 [Ray Tracing Terminology] (Ray Tracing Terminology.md)   
   1.1 Historical Notes   
   1.2 Definitions   
 
-### 2 [What is a Ray?](What is a Ray.md)   
+### 2 [What is a Ray?] (What is a Ray.md)   
   2.1 Mathematical Description of a Ray   
   2.2 Ray Intervals   
   2.3 Rays in DXR   
