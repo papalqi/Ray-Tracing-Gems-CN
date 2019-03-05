@@ -18,12 +18,11 @@ Chris Wyman
 
 [序言](Preface.md)  
 [前言](Foreword.md)  
-
 [表示方法](Notation.md)
 
-## [Part I: Ray Tracing Basics] (Part I Ray Tracing Basics.md)
-### 1 [Ray Tracing Terminology] (Ray Tracing Terminology.md)   
-  1.1 Historical Notes   
+# [ 第一部分，光线追踪基础](Part_I_Ray_Tracing_Basics.md)
+### [光线追踪术语](Ray_Tracing_Terminology.md)   
+  1.1 历史笔记   
   1.2 Definitions   
 
 ### 2 [What is a Ray?] (What is a Ray.md)   
