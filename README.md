@@ -21,15 +21,15 @@ Chris Wyman
 [表示方法](Notation.md)
 
 # [ 第一部分，光线追踪基础](Part_I_Ray_Tracing_Basics.md)
-### [光线追踪术语](Ray_Tracing_Terminology.md)   
+### [1光线追踪术语](Ray_Tracing_Terminology.md)   
   1.1 历史笔记   
-  1.2 Definitions   
+  1.2 定义   
 
-### 2 [What is a Ray?] (What is a Ray.md)   
-  2.1 Mathematical Description of a Ray   
-  2.2 Ray Intervals   
-  2.3 Rays in DXR   
-  2.4 Conclusion  
+### [2什么是光线](What_is_a_Ray.md)   
+  2.1 光线的数学表示   
+  2.2 光线的间隔  
+  2.3 DXR下的光线   
+  2.4 结论 
 
 ### 3 Introduction to DirectX Raytracing  
   3.1 Introduction   

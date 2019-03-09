@@ -1,7 +1,0 @@
-# Ray Tracing Gems
-
-
-
-
-
-#Contents
