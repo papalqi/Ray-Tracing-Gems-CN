@@ -27,24 +27,29 @@
 
 ![1.3区域光投射出柔和的半影阴影区域，umbra完全在阴影中。](./image/图片1.3.png)
 
-在whitted或者经典的光线追踪当中，表面被当作拥有完美的亮光和平滑度，并且光源使用方向和极小点来表示。在Cook or stochastic ray tracing,大多数的光线能够从光线簇的结点发射出来，这能产生多种多样的效果。例如，想象一个球形光而不是点光源。 表面现在可以被部分照亮，因此我们可以向球体上的不同位置发射大量光线，来估计光照到达的程度。 当整合区域光线能见度时，完全阴影点位于本影; 部分点亮的点位于半影内。 见图1.3。
+在whitted或者经典的光线追踪当中，表面被当作拥有完美的亮光和平滑度，并且光源使用方向和极小点来表示。在Cook or stochastic ray tracing,大多数的光线能够从光线簇的结点发射出来，这能产生多种多样的效果。例如，想象一个球形光而不是点光源。 表面现在可以被部分照亮，因此我们可以向球体上的不同位置发射大量光线，来估计光照到达的程度。 当整合区域光线能见度时，完全阴影点位于(umbra); 部分点亮的点位于半影内（Penumbra）。 见图1.3。
 
-通过围绕反射方向在锥形区域内拍摄大量光线并混合结果，我们得到光泽而不是镜像反射。 见图1.4。 这种传播样本的想法也可用于模拟半透明度，景深和运动模糊效果。
-在现实世界中，许多光源发出光，通过各种方式（包括折射和反射）向眼睛发光。
-![镜面，光泽和漫反射光线。 左：入射光在镜像表面上以单一方向反射。 中间：表面经过抛光，如黄铜，在反射方向附近反射光线，并呈现光泽外观。 右：材料是漫射的或无光泽的，例如石膏，入射光在所有方向上散射。](./image/图片1.4.png)
+通过在反射方向周围的圆锥中发射无数光线并混合结果, 我们得到的是光滑反射(glossy reflection ), 而不是镜像反射。 见图1.4。 这种传播样本的想法也可用于模拟半透明度，景深和运动模糊效果。
 
 
-有光泽的表面在许多方向上反射光线，而不仅仅是沿着反射方向; 漫反射或无光表面使光线分散在更广泛的范围内。 在路径追踪中，我们使用出射方向和材料来反转光的散射行为，以帮助确定各种入射方向对曲面阴影的重要性。
 
-跟踪这种复杂的光传输很快变得势不可挡，并且很容易导致低效的渲染。要创建图像，我们只需要从一组特定方向通过相机镜头的光线。各种形式的递归光线追踪会逆转物理过程，从我们知道会影响图像的方向产生来自眼睛的光线。
-在Kajiya风格或路径跟踪中，光线反射场景中的无光泽表面，允许现实世界中的所有光路（衍射之外的相位效果除外）。这里的路径指的是一系列光 - 物体相互作用，它们从相机开始并以光线结束。
+![镜面反射，glossy reflection和漫反射。 左：入射光在镜像表面上以单一方向反射。 中间：表面经过抛光，如黄铜，在反射方向附近反射光线，并呈现光泽外观。 右：材料是漫射的或无光泽的，例如石膏，入射光在所有方向上散射。](./image/图片1.4.png)
+
+在现实世界中，许多光源通过各种方式发出光向眼睛发光（包括折射和反射）。 Glossy surfaces在许多方向上反射光线，而不仅仅是沿着反射方向; 漫反射或无光表面使光线分散在更广泛的范围内。 在路径追踪中(path tracing), 我们反转光的散射行为, 使用传出方向和材质来帮助确定对表面阴影的各种传入方向的重要性。
 
 
-这里的工作短语是“可以” - 如果我们从粗糙表面上的交叉点拍摄一组，比如一千条光线，那么对于每条光线，我们递归地再发送一千条光线，一直持续到光线 每个光线都会遇到光源，我们几乎可以永远计算出一个像素。 相反，当从眼睛投射光线并击中可见表面时，路径跟踪器将从表面以有用的方向产生一条光线。 反过来，这条光线会产生一条新的光线，一组射线形成一条路径。 将像素跟踪的多个路径混合在一起可以估算出像素的真实辐亮度，随着评估更多路径，结果会得到改善。 路径追踪可以在适当的情况下提供无偏见的结果，一个匹配的物理现实。
+跟踪这种复杂的光传输很快变得势不可挡，很容易导致渲染效率低下。为了创建一个图像，我们只需要从一组特定方向的光穿过相机镜头。各种形式的递归光线跟踪会逆转物理过程, 从眼睛产生光线, 朝着我们知道会影响图像的方向生成。
 
-每个表面交叉点位置需要估计来自其周围所有方向的光的贡献，并结合其表面的反射特性。例如，白色天花板旁边的红色墙壁会将红光反射到天花板上，反之亦然。壁和天花板之间发生进一步的相互反射，因为每个进一步反射这种反射光，然后可以影响另一个。通过从眼睛的视图递归地总结这些效果，仅在遇到光时终止，可以形成真实的，基于物理的图像。
+在Kajiya风格或路径跟踪中，光线从场景中的无光表面反射，允许存在真实世界中的所有光路径（相位效果除外，例如衍射）。这里的路径指的是一系列光 - 物体的相互作用，它们从相机开始并以光线结束。
+
+每个表面交点的位置都需要结合其表面的反射特性，来估计来自其周围所有方向的光的贡献值。例如，白色天花板旁边的红色墙壁会将红光反射到天花板上，反之亦然。墙与天花板之间会发生进一步的相互反射, 因为每一个反射光都会进一步反射, 然后会影响到另一个反射的光线。通过从眼睛的视图递归地总结这些效果，仅在遇到光时终止，可以形成真实的，基于物理的图像。
 
 大多数现代光线追踪器使用每个像素不止一个光线作为底层蒙特卡罗（MC，Monte Carlo）算法的一部分。 Cook风格和Kajiya风格的算法就是例子。 这些方法都对某些空间的各种概率密度函数（PDF， probability density functions ）有一定的了解。 例如，在Cook式光线跟踪器中，我们可能会在镜头区域包含一个PDF文件。在基于路径的方法中，PDF将覆盖路径空间中的路径。
+
+这里的工作短语是“可以” - 如果我们从粗糙表面上的交点发出一组光线，比如一千条光线，那么对于每一条光线, 我们都会递归地发送另外一千个, 直到每条光线都遇到光源, 我们可以计算一个像素几乎永远。 相反, 当光线从眼睛中投射出来, 击中可见的表面时, 路径跟踪器将只从表面向有用的方向生成一条光线。这射线反过来将生成一个新的射线, 与之前的射线组形成一个路径。 将像素跟踪的多个路径混合在一起可以估算出像素的真实辐亮度，随着评估更多路径，结果会得到改善。 路径追踪可以在适当的情况下提供无偏见的结果，一个匹配的物理现实。
+
+
+
 
 通过使用蒙特卡罗算法的不均匀采样PDF来减少误差的方法被称为重要性采样（importance sampling）。 使用具有数论方法的样本的低差异模式而不是传统的伪随机数生成器来创建随机样本被称为准蒙特卡罗（QMC，Quasi-Monte Carlo ）采样。 计算机图形从业者在很大程度上使用MC和QMC领域的标准术语。 但是，这种做法会引起令人困惑的同义词。 例如，图形中的“带阴影射线直接照射”是MC / QMC中“next event estimation”的示例。
 
@@ -65,19 +70,34 @@ Ray marching，通常是Hart的球体追踪算法（sphere tracing algorithm ）
 
 ## References
 
-[^1]: Appel, A. Some Techniques for Shading Machine Renderings of Solids. InAFIPS ’68 Spring Joint Computer Conference (1968), pp. 37–45.
+[^1]: Appel, A. Some Techniques for Shading Machine Renderings of Solids. InAFIPS ’68 Spring Joint Computer Conference (1968), pp. 37–45.   
+
 [^2]: Arvo, J., and Kirk, D. Particle Transport and Image Synthesis. Computer Graphics (SIGGRAPH) 24, 4 (1990), 63–66.
+
 [^ 3]: Cook, R. L. Stochastic Sampling in Computer Graphics. ACM Transactions on Graphics 5, 1 (Jan. 1986), 51–72.
+
 [^4]: Cook, R. L., Porter, T., and Carpenter, L. Distributed Ray Tracing.Computer Graphics (SIGGRAPH) 18, 3 (1984), 137–14
+
 [^ 5]: Hart, J. C. Sphere Tracing: A Geometric Method for the Antialiased RayTracing of Implicit Surfaces. The Visual Computer 12, 10 (Dec 1996), 527–545.
+
 [^ 6]: Howell, J. R., Menguc, M. P., and Siegel, R. Thermal Radiation Heat Transfer. CRC Press, 2015.
+
 [^ 7]: Immel, D. S., Cohen, M. F., and Greenberg, D. P. A Radiosity Methodfor Non-Diffuse Environments. Computer Graphics (SIGGRAPH) 20, 4 (Aug.1986), 133–142.
+
 [^ 8]: Kajiya, J. T. The Rendering Equation. Computer Graphics (SIGGRAPH)(1986), 143–150.
+
 [^ 9]: Kay, D. S., and Greenberg, D. Transparency for Computer SynthesizedImages. Computer Graphics (SIGGRAPH) 13, 2 (1979), 158–164.
+
 [^ 10]: Lafortune, E. P. Bidirectional Path Tracing. In Compugraphics (1993),pp. 145–153.
 [^ 11]: Larson, G. W., and Shakespeare, R. Rendering with Radiance: The Art and Science of Lighting Visualization. Booksurge LLC, 2004. 
-[^ 12]: Pharr, M., Jakob, W., and Humphreys, G. Physically Based Rendering:From Theory to Implementation, third ed. Morgan Kaufmann, 2016.
+
+[^ 12]: Pharr, M., Jakob, W., and Humphreys, G. Physically Based Rendering:From Theory to 
+Implementation, third ed. Morgan Kaufmann, 2016.
+
 [^13]:  Roth, S. D. Ray Casting for Modeling Solids. Computer Graphics and Image Processing 18, 2 (1982), 109–144.
+
 [^14]:  Veach, E., and Guibas, L. Bidirectional Estimators for Light Transport. In Photorealistic Rendering Techniques (1995), pp. 145–167.
+
 [^15]:  Veach, E., and Guibas, L. J. Metropolis Light Transport. In Proceedings of SIGGRAPH (1997), pp. 65–76.
+
 [^16]:  Whitted, T. An Improved Illumination Model for Shaded Display. Communications of the ACM 23, 6 (June 1980), 343–34
