@@ -26,6 +26,38 @@ DirectX抽象了光线加速结构，与软件渲染器不同，选择此结构�
 最后，光线追踪要求GPU支持Directx12(检查 dxdiag.exe)。拥有硬件加速的光线追踪对于复杂场景和高分辨率的情况下拥有着更好的表现。在旧的GPU上每个像素跟踪几条射线可能是可行的，特别是当使用简单的场景或较低的分辨率时。由于各种原因，光线追踪要比光栅化的渲染器需要更多的内存。内存较少的硬件可能会表现出糟糕的性能。
 
 ## 3.4	 DirectX的光线追踪管线
+传统的GPU光栅化管线包含许多开发者可以编写传统的shader去控制图像生成的可编程的阶段。DXR介绍了一种新的光线图元和灵活的光线数据存储（见3.5.1）加上5个新的着色阶段，如图3.2中的简化管道图所示。这些着色器允许发射光线，控制光线/几何交点，并遮挡已识别的命中。
+
+![3.2：一个新的DirectX光线跟踪管道的简化视图，包括五个新的着色器阶段(蓝色)：the ray generation, intersection, any-hit, closesthit, and miss shaders。复杂性发生在遍历循环中(大的灰色轮廓，大部分图)，根据边界体积节点和潜在的命中点对光线进行测试，并命令确定最接近的命中点。否未显示为从最接近命中和未命中着色器到Traceray()的潜在递归调用。](./image/3.2.jpg)
+
+
+* 1.ray generation shader在管线的一开始，允许开发者使用内置的`TraceRay()`着色函数，确认那个光线将要发射。和传统的计算着色器一样，它在常规的一维、二维或三维样本网格上执行。
+* 2.Intersection shaders，定义了对于光线和任意图元相交的计算。它为三角形和光线的相交提供了更好的性能。
+
+
+* 3.Any-hit shaders[^1]允许可控地丢弃其它有效的交叉点，例如，在纹理查找后忽略alpha遮罩的几何体。
+*尽管名称角这个，any-hit shaders每个交叉点不会每一次都运行，主要是出于性能原因。 默认情况下，它们可以运行每条光线的变量，与实现相关的次数。 仔细阅读规范以了解和控制更复杂用例的行为。*
+
+* 4.closest-hit shader在沿每条光线的最近的交叉点处执行。 通常，这会计算交叉点处的颜色，类似于栅格化管道中的像素着色器。
+* 5 当光线错过场景中的所有几何图形时，miss shader就会执行。例如，这允许查找环境映射或动态天窗模型。
+
+正如您在介绍性教材[^9]中所发现的那样，请思考右侧的伪代码以获得简单的CPU光线跟踪器。 代码循环输出图像，为每条光线设置方向，遍历加速结构，在重叠的加速结构节点中计算几何交叉，查询这些交叉点是否有效，以及对最终结果进行着色
+```
+for x, y ∈ image.dims() do
+    [1] ray = computeRay(x, y);
+    closestHit = null;
+    while
+    leaf = findBvhLeafNode(ray, scene)
+    do
+        [2] hit = intersectGeometry(ray,leaf);
+        if isCloser(hit, closestHit) then
+            if [3] isOpaque(hit) then
+                closestHit = hit;
+    if closestHit then
+        [4] image[x,y] = shade(ray,closestHit);
+    else
+        [5] image[x,y] = miss(ray);
+```
 
 ## 3.5	New HLSL Support for DirectX Raytracing
 
