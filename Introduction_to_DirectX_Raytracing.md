@@ -58,8 +58,17 @@ for x, y ∈ image.dims() do
     else
         [5] image[x,y] = miss(ray);
 ```
+至少对于标准的使用用例，新的DXR着色器上面这个简单的光线追踪器的部分内容具有对应关系。射线生成着色器的发射尺寸对应于图像尺寸。相机计算生成每个像素的光线发生在光线生成着色器中。
 
-## 3.5	New HLSL Support for DirectX Raytracing
+当光线遍历边界体积层次结构时，叶子节点中图元的实际交点在逻辑上出现在DirectX交点着色器中（intersection shaders），并且可以在 any-hit shader着色器中丢弃检测到的交点。 最后，一旦光线通过加速结构完成其遍历，它将在最近命中的着色器中着色或在未命中着色器中给出默认颜色。
+## 3.5	新的支持DirectX光线跟踪的HLSL
+1.Ray traversal functions 产生光线并允许控制它们的执行。
+2.Launch introspection functions查询启动维度并识别当前线程正在处理的光线（或像素）。 这些函数在任何光线跟踪着色器中都有效。
+3.Ray introspection functions 查询光线参数和属性，并且只要你输入光线（除光线生成着色器之外的所有光线跟踪着色器）都可以使用。
+4.Object introspection functions查询对象和实例属性，只要您有输入图元（intersection, any-hit, and closesthit shaders），我们就能够使用它。
+5.Hit introspection functions查询当前交集的属性。 属性主要由用户定义，因此这些功能允许在操作和命中着色器之间进行通信。 这些函数仅在 any-hit and closest-hit shaders中可用。
+### 3.5.1 在HLSL中发射一种新的射线
+
 
 ## 3.6	A Simple HLSL Ray Tracing Example
 
