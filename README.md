@@ -31,7 +31,7 @@ Chris Wyman
   2.3 DXR下的光线   
   2.4 结论 
 
-### 3 Introduction to DirectX Raytracing  
+### [3 Introduction to DirectX Raytracing](Introduction_to_DirectX_Raytracing.md )  
   3.1 Introduction   
   3.2 Overview   
   3.3 Getting Started  
