@@ -68,9 +68,54 @@ for x, y ∈ image.dims() do
 4.Object introspection functions查询对象和实例属性，只要您有输入图元（intersection, any-hit, and closesthit shaders），我们就能够使用它。
 5.Hit introspection functions查询当前交集的属性。 属性主要由用户定义，因此这些功能允许在操作和命中着色器之间进行通信。 这些函数仅在 any-hit and closest-hit shaders中可用。
 ### 3.5.1 在HLSL中发射一种新的射线
+最重要的新函数TraceRay()会发起一条ray。从逻辑上讲，这类似于纹理获取：它暂停着色器以获得一个可变(可能很大的)数目的GPU时钟。当结果可用于进一步处理时恢复执行。 光 Ray generation, closest-hit, and miss shaders都可以调用TraceRay（）。 这些着色器可以为每个线程发射零个，一个或多个光线。 基本光线发出的代码如下所示：
+```
+RaytracingAccelerationStructure scene ; // Scene BVH from C ++
+RayDesc ray = { rayOrigin , minHitDist , rayDirection , maxHitDist };
 
+ UserDefinedPayloadStruct payload = { ... < initialize here > ... };
 
-## 3.6	A Simple HLSL Ray Tracing Example
+TraceRay ( scene , RAY_FLAG_NONE , instancesToQuery , // What geometry ?
+     hitGroup , numHitGroups , missShader , // Which shaders ?
+    ray , // What ray to trace ?
+    payload ); // What data to use ?
+```
+ UserDefinedPayloadStruct 包含在光线的生命周期内持续存在的每个射线数据。 在遍历期间使用它来维护光线状态并从`TraceRay（）`返回结果。 DirectX定义`RayDesc`结构以存储光线原点，方向以及最小和最大命中距离（命令包装在两个`float4`中）。 将忽略指定间隔之外的光线的交点。 加速结构通过主机API定义（参见第3.8.1节）。
+
+第一个`TraceRay()`参数选择包含几何形状的BVH。简单的光线追踪器通常使用单一的BVH，但是独立地查询多个结构可以允许对于不同的几何类有着不同的行为(例如，透明/不透明，动态/静态)。第二个参数包含改变光线行为的标志，例如，指定对光线有效的附加优化。第三个参数是一个整数实例掩码，它允许每个基于实例的掩码跳过几何体；使用0xFF能够测试所有的几何图形。
+
+第四个和第五个参数有助于选择要使用的命中组（hit group）。  intersection, closest-hit, and any-hit shader（其中一些可能为空）组成。 使用哪个集合取决于这些参数以及测试的几何类型和BVH实例。 对于基本光线跟踪器，每种光线类型通常有一个命中组：例如，主光线可能使用命中组0，阴影光线使用命中组1，全局照明光线使用命中组2.在这种情况下，第四个参数选择光线的类型，第五个指定不同类型的数量。
+
+第六个参数指定要使用的miss shader。 这只是到加载的miss shader列表的索引。 第七个参数是要跟踪的光线，第八个参数应该是此光线的用户定义的持久性有效负载结构（user-defined persistent payload structure）.
+
+### 3.5.2 在HLSL控制光线遍历
+除了在光线启动时指定标志外，DirectX还提供了三个附加功能来控制intersection shaders和any-hit shaders中光线的行为。 在 自定义的intersection shaders中调用`ReportHit（）`以标识光线到达图元的位置。 这方面的例子如下：
+```
+if ( doesIntersect ( ray , curPrim ) ) {
+    PrimHitAttrib hitAttribs = { ... < initialize here > ... };
+    uint hitType = <user - defined - value >;
+    ReportHit ( distToHit , hitType , hitAttribs );
+ }
+```
+`ReportHit（）`的输入是到光线到交点的距离，用户可定义的指定命中的类型的整数，以及用户可定义的命中的属性结构。 命中类型可以通过`HitKind（）`转换为8位无符号整数来用于 hit shaders。 它可用于确定光线/图元间的属性，例如面部方向，但由于它是用户定义的，所以有着很高的自由度。当内置的三角形命中器发出报告时，`HitKind（）`返回`D3D12 HIT KIND TRIANGLE FRONT FACE`或`D3D12 HIT KIND`。 命中属性作为参数传递给any-hit and closest-hit shaders。 当使用三角形命中器时， hit shaders使用BuiltInTriangleIntersectionAttributes类型的参数。
+另外，请注意，如果命中点是迄今为止遇到的最接近的命中，ReportHit()将返回true。调用any-hit shaders中的函数IgnoreHit()来停止处理当前的顶点。这会将返回到intersection shader(并且`ReportHit()`返回`false`)，并且行为类似于光栅中的丢弃调用(discard call)，但保留了对光线有效载荷的修改。
+
+在any-hit shaders调用`AcceptHitAndEndSearch()`，它接受当前命中信息，跳过任何未被搜索的BVH节点，并立即在closest-hit shader使用这个当前最接近的命中。 这对于优化阴影射线遍历很有用，因为这些光线只是确定是否有任何东西被击中而不会触发更复杂的着色和光照评估。
+### 3.5.3其他HLSL内置函数
+所有光线跟踪着色器都可以分别使用`DispatchRaysDimensions（）`或`DispatchRaysIndex（）`查询当前光线发射尺寸和线程索引。 请注意，两个函数都返回一个`uint3`，因为光线发射可以是一维，二维或三维的。
+
+ 对于内置，`WorldRayOrigin（）`，`WorldRayDirection（）`，`RayTMin（）`和`RayFlags（）`分别返回提供给`TraceRay（）`的原点，方向，最小遍历距离和光线标记。 在any-hit shaders和closest-hit shaders，`RayTCurrent（）`返回当前命中的距离。 在 intersection shader，`RayTCurrent（）`返回到最近命中的距离（在着色器执行期间可能会改变）。 在miss shader期间，`RayTCurrent（）`返回指定给`   TraceRay（）`的最大遍历距离。
+
+ 在intersection, any-hit, and closest-hit shaders中，可以使用许多object introspection 内联函数：
+ * `InstanceID()`返回当前实例的用户定义标识符。
+ * `InstanceIndex()`和`PrimediveIndex(`)返回系统为当前实例和原语定义的标识符。
+ * `ObjectToWorld3x4()`和`ObjectToWorld4x3()`是从对象空间到世界空间。
+ 
+ * `WorldToObject3x4()`和`WorldToObject4x3()`将矩阵从世界空间返回到对象空间。
+ * `ObjectRaydirection()`和`ObjectRayOriue()`提供转换为实例坐标空间的光线数据
+
+## 3.6	一个简单的HLSL光线跟踪示例
+
 
 ## 3.7	Overview of Host Initialization for DirectX Raytracing
 
@@ -84,7 +129,7 @@ for x, y ∈ image.dims() do
 
 ## 3.12	Digging Deeper and Additional Resources
 
-## 3.13	Conclusion
+## 3.13	总结
 
 ## References
 [^1]	Benty,	N.	DirectX	Raytracing	Tutorials.	https://github.com/ NVIDIAGameWorks/DxrTutorials, 2018. Accessed October 25, 2018.
