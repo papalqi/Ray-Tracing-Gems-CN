@@ -116,7 +116,61 @@ if ( doesIntersect ( ray , curPrim ) ) {
 
 ## 3.6	一个简单的HLSL光线跟踪示例
 
+要提供更实际的实际工作示例，请考虑以下HLSL代码段。 它定义了一个由函数`ShadowRay（）`实例化的光线，如果光线被遮挡则返回0，否则返回1（即，一个“光线”。由于`ShadowRay（）`调用`TraceRay（）`，它只能在 ray generation,，closest-hit,or miss shaders。逻辑上，当我们明确地知道光线未被遮挡时，光线假定它被遮挡，除非miss shaders被执行，这使我们能够避免执行closest-hit（RAY FLAG SKIP） 并在遮挡发生（RAY FLAG ACCEPT FIRST HIT AND END SEARCH)）任何击中后停止。
+```
+RaytracingAccelerationStructure scene; // C ++ puts built BVH here
 
+struct ShadowPayload { // Define a ray payload
+	 float isVisible; // 0: occluded , 1: visible
+	
+};
+
+[shader(" miss ")] // Define miss shader #0
+ void ShadowMiss(inout ShadowPayload pay) {
+	pay.isVisible = 1.0 f; // We miss ! Ray unoccluded
+	
+}
+
+[shader(" anyhit ")] // Add to hit group #0
+ void ShadowAnyHit(inout ShadowPayload pay,
+	 BuiltInTriangleIntersectionAttributes attrib) {
+	 if (isTransparent(attrib, PrimitiveIndex()))
+		 IgnoreHit(); // Skip transparent hits
+	
+}
+
+ float ShadowRay(float3 orig, float3 dir, float minT, float maxT) {
+	 RayDesc ray = { orig , minT , dir , maxT }; // Define our new ray .
+	 ShadowPayload pay = { 0.0 f }; // Assume ray is occluded
+	 TraceRay(scene,
+		 (RAY_FLAG_SKIP_CLOSEST_HIT_SHADER |
+			 RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH),
+		  xFF, 0, 1, 0, ray, pay); // Hit group 0; miss 0
+	 return pay.isVisible; // Return ray payload
+	
+}
+```
+
+请注意，此代码使用自定义编写的isTransparent()函数来查询材料系统(基于基本ID和命中点)来执行alpha测试。有了这个地方，影子射线就可以发射了。由其他着色器投射；例如，简单的环境遮挡渲染器看起来如下：
+
+```
+Texture2D < float4 > gBufferPos, gBufferNorm; // Input G - buffer
+RWTexture2D <float4 > output; // Output AO buffer
+
+[shader(" raygeneration ")]
+void SimpleAOExample() {
+	uint2 pixelID = DispatchRaysIndex().xy; // What pixel are we on ?
+	float3 pos = gBufferPos[pixelID].rgb; // AO rays from where ?
+	float3 norm = gBufferNorm[pixelID].rgb; // G - buffer normal
+	float aoColor = 0.0 f;
+	for (uint i = 0; i < 64; i++) // Use 64 rays .
+		aoColor += (1.0 f / 64.0 f) * ShadowRay(pos, GetRandDir(norm), 1e - 4);
+	output[pixelID] = float4(aoColor, aoColor, aoColor, 1.0 f);
+
+}
+```
+
+GetRandDir（）函数返回由曲面法线定义的单位半球内随机选择的方向，传递给ShadowRay（）的$1e^{-4}$ minT值是一个偏移量，有助于避免自相交（有关更多高级选项，请参阅第6章）
 ## 3.7	Overview of Host Initialization for DirectX Raytracing
 
 ## 3.8	Basic DXR Initialization and Setup
@@ -125,12 +179,65 @@ if ( doesIntersect ( ray , curPrim ) ) {
 
 ## 3.10	Shader Tables
 
-## 3.11	Dispatching Rays
+## 3.11	调度光线
+完成3.8-3.10节中的步骤后，我们终于可以追踪光线了。 由于着色器表具有任意，灵活的布局，我们需要在光线跟踪开始之前使用D3D12 DISPATCH RAYS DESC描述我们的表。 此结构指向着色器表GPU内存，并指定要使用的光线生成着色器，错过着色器和命中组。 此信息使DXR运行时能够计算着色器表记录索引（在第3.7.1和3.10节中描述）。
 
-## 3.12	Digging Deeper and Additional Resources
+接下来，指定光线调度大小。 与计算着色器类似，光线调度使用三维网格。 如果以二维方式调度光线（例如，对于图像），请确保深度尺寸设置为1; 默认初始化将其设置为零，这将产生无效。 配置着色器表指针和调度维度后，使用新的命令列表函数SetPipelineState1（）设置RTPSO，并使用DispatchRays（）生成光线。 以下是一个示例：
 
+
+```
+// Describe the ray dispatch .
+ D3D12_DISPATCH_RAYS_DESC desc = {};
+
+ // Set ray generation table information .
+desc.RayGenerationShaderRecord.StartAddress =
+
+
+shdrTable->GetGPUVirtualAddress();
+desc.RayGenerationShaderRecord.SizeInBytes = shaderRecordSize;
+
+// Set miss table information .
+uint32_t missOffset = desc.RayGenerationShaderRecord.SizeInBytes;
+desc.MissShaderTable.StartAddress =
+shdrTable->GetGPUVirtualAddress() + missOffset;
+desc.MissShaderTable.SizeInBytes = shaderRecordSize;
+desc.MissShaderTable.StrideInBytes = shaderRecordSize;
+
+// Set hit group table information .
+uint32_t hitOffset = missOffset + desc.MissShaderTable.SizeInBytes;
+desc.HitGroupTable.StartAddress =
+shdrTable->GetGPUVirtualAddress() + hitGroupTableOffset;
+desc.HitGroupTable.SizeInBytes = shaderRecordSize;
+desc.HitGroupTable.StrideInBytes = shaderRecordSize;
+
+// Set the ray dispatch dimensions .
+desc.Width = width;
+desc.Height = height;
+desc.Depth = 1;
+
+commandList->SetPipelineState1(rtpso); // Set the RTPSO .
+ commandList->DispatchRays(&desc); // Dispatch rays !
+
+```
+
+## 3.12	深入挖掘和追加资源
+在本章中，我们尝试概述DirectX光线跟踪扩展以及它们背后的相应心理模型。特别是，我们专注于使用DXR启动和运行所需的着色器和主机端代码的基础知识。无论您是编写自己的DirectX主机端代码还是有一些库（例如Falcor）为您提供，从这一点开始使用光线跟踪变得更加容易：基本设置完成后，添加更多光线跟踪效果通常就像更改几行着色器代码一样简单。
+
+显然，我们有限篇幅的介绍性章节无法深入探讨。我们鼓励您探索提供基本DirectX基础结构代码，示例，最佳实践和性能提示的各种其他资源。
+
+SIGGRAPH 2018课程“DirectX光线跟踪简介”[12]可在YouTube上获得，并提供深入的DXR着色器教程[11]，使用Falcor框架[2]抽象低级DirectX细节，让您专注于核心轻型运输细节。这些教程介绍了基础知识，例如打开窗口，创建简单的G缓冲区，使用环境遮挡渲染以及用于抗锯齿和景深的高级相机模型，直至全反射全局照明。图3.4显示了使用教程代码呈现的几个示例。
+
+其他有用的教程包括那些侧重于低级主机代码的教程，包括激发本章后半部分的Marrs'API示例[3]，Microsoft的入门DXR示例[6]以及Falcor团队的低级示例[1]。此外，NVIDIA在其开发者博客上提供了各种资源，包括其他代码示例和演练[8]。
 ## 3.13	总结
 
+我们已经介绍了DirectX光线跟踪的基本概述，我们希望能帮助你揭示使用DirectX组合基本硬件加速光线跟踪器所需的概念，此外还提供指向其他资源的网址以帮助您入门。
+着色器模型类似于先前的光线跟踪API，并且通常干净地映射到传统CPU光线跟踪器的片段。主机端编程模型最初可能看起来复杂且不透明;请记住，设计需要支持任意的，大规模并行的硬件，这些硬件可能会产生着色器，而不会产生沿每条光线的连续执行历史记录的好处。新的DXR管道状态对象和着色器表有助于指定数据和着色器，因此这些GPU可以随着光线穿过场景而任意生成工作。
+
+鉴于DirectX 12的复杂性和光线跟踪的灵活性，我们无法完全覆盖API。我们的目标是提供足够的信息以便入门。在定位更复杂的渲染时，您需要参考DXR规范或其他文档以获得进一步的指导。特别是，更复杂的着色器编译，默认管道子对象设置，系统限制，错误处理以及最佳性能提示都需要其他参考。
+
+我们的入门建议：简单地开始。关键问题围绕正确设置光线跟踪管道状态对象和着色器表，这些使用更少，更简单的着色器更容易调试。例如，使用光栅化G缓冲器进行主要可见性的基本光线跟踪阴影或环境遮挡是良好的起点。
+
+使用DirectX光线跟踪和现代GPU，射击光线比以往任何时候都快。但是，光线追踪并不是免费的。至少在不久的将来，您可以假设每个像素最多只有几条光线。这意味着混合光线栅格算法，抗锯齿，去噪和重建对于快速实现高质量渲染至关重要。本书中的其他工作提供了有关其中一些主题的想法，但许多问题仍未解决。
 ## References
 [^1]	Benty,	N.	DirectX	Raytracing	Tutorials.	https://github.com/ NVIDIAGameWorks/DxrTutorials, 2018. Accessed October 25, 2018.
 
