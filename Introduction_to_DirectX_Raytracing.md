@@ -1,22 +1,24 @@
 # Ray Tracing Gems
 
 ## Abstract
-现代的图形APIs如DirectX 12对开发者暴露了更加底层的硬件接口访问和控制，这就经常导致对于初学者看到这种复杂冗长的代码会感到害怕。在这一章，我们希望一步步解密安装和使用DirectX的光线追踪。
+现代的图形API，例如DirectX 12，对开发者暴露了更加底层的对于硬件接口的访问和控制，这就通常导致初学者看到此类复杂冗长的代码会感到害怕。在这一章里，我们将一步步介绍如何进行安装和使用DirectX的光线追踪。
 
 ## 3.1	介绍
-在2018年的游戏开发者大会上，微软宣布了他们的 DirectX Raytracing (DXR)API,这扩展了Directx12的本地光线追踪支持。随着2018年10月份windows10的更新,这个API运行在所有的支持DX12的GPU上，不是使用专用硬件加速就是通过基于计算的软件调用。此功能为DirectX渲染器提供了新选项，从完整的，电影质量的路径跟踪器到更简陋的光线-光栅混合，例如，用光线跟踪替换光栅渲染的阴影或反射。
+在2018年的游戏开发者大会上，微软宣布了他们的 DirectX Raytracing (DXR)API,这扩展了Directx12的对于光线追踪的本地支持。随着2018年10月份windows10的更新,这个API运行在所有支持DX12的GPU上，不论所使用的GPU是通过专用的硬件加速还是通过基于计算的软件调用来实现的。这项功能给包括从成熟的，电影质量的路径追踪器到更简陋的光线-光栅混合的DirectX渲染器提供了新选项。例如，用光线追踪替换光栅渲染的阴影或反射效果。
 
-与所有图形API一样，在深入研究代码之前，一些先决条件非常重要。 本章假设读者了解光线跟踪的基本原理，并参考本书的其他章节，或者其他文本[^ 4,^ 10]了解l 基本原理。此外，我们假定读者熟悉GPU编程；了解光线跟踪shader，具有基本DirectX、Vulkan或OpenGL的经验。如果你有以前使用DirectX 12的经验可能对理解底层的细节有帮助。
+![基于DirectX路径追踪器的亚马逊兰伯亚德小酒馆。](./image/3.1.jpg)
+与所有的图形API一样，在深入研究代码之前，一些先决条件非常重要。 本章假设读者已经了解光线追踪的基本原理，对于这些基础，读者可以参考本书的其他章节，或者其他的介绍读物[^ 4,^ 10]来了解基本原理。此外，我们假定读者熟悉GPU编程；了解光线跟踪shader，具有基本DirectX、Vulkan或OpenGL的经验。如果你有以前拥有使用DirectX 12的经验，可能会对你理解更加底层的细节有所帮助。
 ## 3.2	概述
 
-GPU编程有三个独立于api的关键部分组成
-* （1）GPU设备编程
-* （2）CPU主机端设置进程（the CPU host-side setup process）
-* （3）主机和设备之间的数据共享。
-在我们讨论每一个部分之前，3.3节介绍了重要的软件和硬件的要求，以便开始构建和运行基于DXR的程序。
+GPU编程有三个独立于api的关键部分组成  
+（1）GPU设备编程  
+（2）CPU主机端安装过程（the CPU host-side setup  process） ^^^^^   
+（3）主机和设备之间的数据共享。   
+在我们讨论这里的每一部分之前，3.3节介绍了重要的软硬件要求，以便能够构建和运行基于DXR的程序。
 
-然后我们讨论每一个核心的部分，3.4，3.5，3.6章节开始介绍如何去编写DXR的shaders.对于DXR的高级着色语言（HLSL）看起来和用c++写的串行的光线追踪器很相似。使用库来抽象主机端的图形API(例如Falcor),甚至初学者都能很快搭建有趣的GPU加速的光线追踪器。在3.1节有一个例子的展示，它是用一个简单的路径追踪器扩展的Falcor来呈现的。  
-3.7节提供了主机断DXR的安装过程的概述，并且描述了the mental model驱动新的API。3.8节包括必要的DXR初始化、建立光线加速的必要数据结构和对tracing shaders 的编译。3.9和3.10章分别介绍了新的光线追踪 pipeline state objectsh和 shader tables,他们定义了host和GPU间的数据通信。3.11展示了如何配置和启动光线。最后3.12讨论了对于想要深入研究的读者来说的额外的学习资源。  
+之后我们将讨论每一个核心的部分，我们从如何去编写DXR shaders开始，在3.4，3.5，3.6等章节。对于DXR的高级着色语言（HLSL）看起来和在CPU端用c++写的串行的光线追踪器很相似。使用库来抽象主机端的图形API(例如Falcor[^ 2]),甚至初学者都能很快搭建有趣的的、使用GPU加速的光线追踪器。如图3.1是一个示例展示，他是使用简单的路径追踪器扩展的Falcor来渲染的。
+
+3.7节提供了主机DXR的安装过程的概述，并且描述了能驱动新的API的the mental model^^^^^^。3.8节包含主机端的详细步骤，包括必要的DXR初始化、建立光线加速的数据结构和对tracing shaders 的编译。3.9和3.10章分别介绍了新的光线追踪 染管线状态对象（pipeline state objects）和 着色器表（shader tables）,他们定义了host和GPU间的数据通信。3.11展示了如何配置和启动光线。最后3.12讨论了对于想要深入研究的读者来说的额外的学习资源。  
 
 DirectX抽象了光线加速结构，与软件渲染器不同，选择此结构是影响性能的关键选择。今天的共识是，边界体积层次结构（BVHs）有着比其他结构更好的特性，因此本章的前半部分将加速结构称为边界体积层次结构（bounding volume hierarchies），即使DirectX不强制要求使用BVH。 第3.8.1节详细说明了加速结构的初始化
 ## 3.3	开始
@@ -171,14 +173,241 @@ void SimpleAOExample() {
 ```
 
 GetRandDir（）函数返回由曲面法线定义的单位半球内随机选择的方向，传递给ShadowRay（）的$1e^{-4}$ minT值是一个偏移量，有助于避免自相交（有关更多高级选项，请参阅第6章）
-## 3.7	Overview of Host Initialization for DirectX Raytracing
+## 3.7DirectX光线跟踪的主机初始化概述
+到目前为止，我们专注于DirectX光线跟踪所需的着色器代码。如果使用支持DXR的引擎或框架，这应该提供足够的入门。但是，从头开始时，您还需要一些低级DirectX主机端代码来初始化光线跟踪器。详见3.8-3.11节，关键的初始化步骤包括：
+1.初始化DirectX设备并验证它是否支持光线跟踪。
+2.建立射线加速结构并指定场景几何体。
+3.加载并编译着色器。
+4.定义根签名和着色器表，以将渲染参数从CPU传递到GPU。
+5.为光线跟踪管道定义DirectX管道状态对象。
+6.Dispatch工作到GPU实际跟踪光线。
+与所有DirectX 12 API一样，光线跟踪API是低级别且冗长的。在分配所有资源，执行验证和检查错误之后，即使是简单的样本[3]也会运行1000多行C ++代码。为了清楚和简洁起见，我们在以下部分中的代码片段重点关注光线跟踪所需的新关键功能和结构。
+### 3.7.1
+在尝试理解这些代码片段时，请记住目标。与光栅化不同，当光线跟踪每条光线时，可能会与任意几何体和材质相交。在实现高性能的同时实现这种灵活性意味着以良好组织且易于索引的格式为GPU上所有可能相交的表面提供着色器数据。因此，跟踪光线和着色交叉表面的过程在DirectX中耦合，不像离线或CPU光线跟踪器，这两个操作通常是独立的。
+考虑3.4节中的新着色器阶段。 Ray生成着色器有一个标准的GPU编程模型，其中线程组并行启动，但其他着色器程序有效地充当回调：当光线击中球体时运行一个，运行另一个以对三角形上的点进行着色，然后运行第三，当缺少所有几何。着色器会被生成，唤醒，并且需要识别要执行的工作，而无需持续执行历史记录。如果衍生着色器的工作取决于几何属性，则DirectX需要理解这种关系，例如，最近命中的着色可能取决于交叉时计算的曲面法线。
+需要哪些信息来识别为曲面运行的正确着色器？根据光线跟踪器的复杂程度，着色器可能会因以下因素而异：
+>射线类型：射线可能需要不同的计算（例如，阴影）。
+>原始类型：三角形，球形，锥形等可能有不同的需求。
+>原始标识符：每个基元可以使用不同的材料。
+>实例标识符：实例化可能会更改所需的着色。
+实际上，DirectX运行时的着色器选择是提供给TraceRay（）的参数，几何信息和每实例数据的组合。
+为了有效地实现实时光线跟踪所需的灵活跟踪和着色操作，DXR引入了两种新的数据结构：加速结构和着色器表。着色器表尤为重要，因为它们可以将光线，几何体和着色操作结合在一起。我们在3.8.1和3.10节中详细讨论了这些细节。
 
-## 3.8	Basic DXR Initialization and Setup
+## 3.8基本DXR初始化和设置
+DXR的主机端初始化和设置扩展了DirectX 12定义的进程。适配器，命令分配器，命令队列和防护等基础对象的创建未更改。 新设备类型ID3D12Device5包括查询GPU光线跟踪支持，确定光线跟踪加速结构的内存要求以及创建光线跟踪管道状态对象（RTPSO）的功能。 光线跟踪功能驻留在新的命令列表类型ID3D12GraphicsCommandList4中，包括用于构建和操作光线跟踪加速结构，创建和设置光线跟踪管道状态对象以及调度光线的功能。 用于创建设备，查询光线跟踪支持和创建光线跟踪命令列表的示例代码如下：
+```
+IDXGIAdapter1* adapter; // Create as in raster-based code
+ID3D12CommandAllocator* cmdAlloc; // Create as in raster-based code
+ID3D12GraphicsCommandList4* cmdList; // Command list for ray tracing
+ID3D12Device5* dev; // Device for ray tracing
+HRESULT hr; // Return type for D3D12 calls
 
+// Create a D3D12 device capable of ray tracing.
+hr = D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_12_1,
+	_uuidof(ID3D12Device5), (void**)&dev);
+if (FAILED(hr)) Exit("Failed to create device");
+
+// Check if the D3D12 device actually supports ray tracing.
+D3D12_FEATURE_DATA_D3D12_OPTIONS5 caps = {};
+Introduction to DirectX Raytracing
+
+hr = dev->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5,
+	&caps, sizeof(caps));
+
+if (FAILED(hr) || caps.RaytracingTier < D3D12_RAYTRACING_TIER_1_0)
+	Exit("Device or driver does not support ray tracing!");
+
+// Create a command list that supports ray tracing.
+hr = dev->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+	cmdAlloc, nullptr, IID_PPV_ARGS(&cmdList));
+```
+
+设备创建后，将通过查询光线跟踪支持
+CheckFeatureSupport（）使用new
+  D3D12_FEATURE_DATA_D3D12_OPTIONS5结构。 光线跟踪支持属于D3D12_RAYTRACING _TIER枚举定义的层。 目前，存在两个层：D3D12_RAYTRACING_TIER_1_0和D3D12_RAYTRACING_TIER_NOT_SUPPORTED
+
+3.8.1几何和加速结构
+分层场景表示对于高性能光线跟踪至关重要，因为它们将光线/原始交叉点的跟踪复杂度从线性降低到对数。近年来，研究人员已经探索了这些射线追踪加速结构的各种替代方案，但今天的共识是边界体积等级（BVH）的变体具有最佳特征。除了对基元进行分层分组之外，BVH还可以保证有限的内存使用。
+DirectX加速结构是不透明的，驱动程序和底层硬件决定数据结构和内存布局。现有的实现依赖于BVH，但供应商可以选择替代结构。 DXR加速结构通常在运行时在GPU上构建，包含两个级别：底层和顶层。底层加速结构（BLAS）包含几何或过程基元。顶级加速结构（TLAS）包含一个或多个底层结构。这允许通过将相同的BLAS多次插入TLAS中来进行几何实例化，每个BLAS具有不同的变换矩阵。底层结构构建较慢，但提供快速光线交叉。顶层结构可以快速构建，提高几何的灵活性和可重用性，但过度使用会降低性能。为获得最佳性能，底层结构应尽可能少地重叠。
+如果几何拓扑保持固定（仅节点边界发生变化），加速结构可以“重新调整”，而不是在动态场景中重建BVH。重建成本比重建成本低一个数量级，但重复改装通常会降低光线跟踪性能。要平衡跟踪和构建成本，请使用适当的修改和重建组合。
+
+3.8.1.1底层加速结构
+要创建加速结构，从构建底层开始。首先，使用D3D12_RARACE_DESC结构来指定几何图形的顶点、索引和转换数据。在底层结构中。请注意，射线跟踪顶点和索引缓冲区不是特殊的，但与用于栅格化的缓冲区相同。演示如何指定不透明的示例。几何学如下：
+```
+struct Vertex {
+	XMFLOAT3 position;
+	XMFLOAT2 uv;
+
+};
+
+vector<Vertex> vertices;
+vector<UINT> indices;
+ID3D12Resource* vb; // Vertex buffer
+ID3D12Resource* ib; // Index buffer
+
+ // Describe the geometry.
+D3D12_RAYTRACING_GEOMETRY_DESC geometry;
+geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+geometry.Triangles.VertexBuffer.StartAddress =
+vb->GetGPUVirtualAddress();
+geometry.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+geometry.Triangles.VertexCount = static_cast<UINT>(vertices.size());
+geometry.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+geometry.Triangles.IndexBuffer = ib->GetGPUVirtualAddress();
+geometry.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+geometry.Triangles.IndexCount = static_cast<UINT>(indices.size());
+geometry.Triangles.Transform3x4 = 0;
+geometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+```
+当描述BLAS几何时，使用标志通知光线跟踪着色器有关几何。例如，正如我们在3.6节中所看到的，对于着色器来说，了解相交几何是否不透明是很有用的或者是透明的。如果几何学是不透明的，请指定D3D12_RARRACE_GENICATION_LOGER_OXUBLIC；否则，指定*_接下来，查询构建blas所需的内存，并存储完整构建的结构。乌尔。使用新的GetRaytracingAccelerationStructurePrebuildInfo()设备函数来获取划痕和结果缓冲区的大小。在构建过程中使用划痕缓冲区，并且T缓冲器存储已完成的BLAS。Build标志描述预期的BLAS使用情况，允许内存和性能优化。D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_标志_最小化_内存D*_ALLOL_PLAIN标志有助于减少所需内存。其他标志请求其他所需的其他特性，例如更快的跟踪或构建时间(*_ABOSE_FAST_TRACE或*_ABUS_FAST_Build)或允许动态BVH重构(*_ALLOW_UPDATE)这是一个简单的例子：
+
+```
+// Describe the bottom-level acceleration structure inputs.
+D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS ASInputs = {};
+ASInputs.Type =
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+ASInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+
+// From previous code snippet
+ASInputs.pGeometryDescs = &geometry;
+
+ ASInputs.NumDescs = 1;
+ ASInputs.Flags =
+ D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+
+ // Get the memory requirements to build the BLAS.
+ D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO ASBuildInfo = {};
+ dev->GetRaytracingAccelerationStructurePrebuildInfo(
+	 & ASInputs, &ASBuildInfo);
+     
+```
+确定所需内存后，为blas分配GPU缓冲区。划痕缓冲区和结果缓冲区都必须支持无序访问视图(UAV)，该视图由D3D12_Resource_FLAL_ALLOW_UNORDEL_UNORDER_访问标志。使用D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE作为最终BLAS缓冲区的初始状态。通过指定几何形状和分配blas内存，我们可以构建我们的加速度。离子结构这看起来如下：
+```
+ID3D12Resource* blasScratch; // Create as described in text.
+ID3D12Resource* blasResult; // Create as described in text.
+
+// Describe the bottom-level acceleration structure.
+D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC desc = {};
+desc.Inputs = ASInputs; // From previous code snippet
+
+desc.ScratchAccelerationStructureData =
+blasScratch->GetGPUVirtualAddress();
+desc.DestAccelerationStructureData =
+blasResult->GetGPUVirtualAddress();
+
+// Build the bottom-level acceleration structure.
+ cmdList->BuildRaytracingAccelerationStructure(&desc, 0, nullptr);
+```
+由于BLAS可以在GPU上异步构建，所以在使用它之前等待构建完成。为此，将UAV屏障添加到引用BLAS结果缓冲区的命令列表中。
+### 3.8.1.2顶层加速结构
+建造地图集类似于建造底层结构，有一些小的但重要的变化。不是提供几何描述，每个Tlas包含一个每个实例都有一个掩码，允许在每个射线的基础上拒绝整个实例，而不需要任何原始的交叉点，并结合TraceRay()的参数(参见3.5.1节)。例如，实例掩码可以在每个对象的基础上禁用阴影。每个实例都可以唯一地转换blas的几何形状。附加标志允许覆盖透明度，正面获胜丁丁，还有扑杀。下面的示例代码定义了TLAS实例：
+```
+
+Describe the top - level acceleration structure instance(s).
+D3D12_RAYTRACING_INSTANCE_DESC instances = {};
+// Available in shaders
+instances.InstanceID = 0;
+// Choose hit group shader
+instances.InstanceContributionToHitGroupIndex = 0;
+// Bitwise AND with TraceRay() parameter
+instances.InstanceMask = 1;
+instances.Transform = &identityMatrix;
+// Transparency? Culling?
+instances.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+ instances.AccelerationStructure = blasResult->GetGPUVirtualAddress();
+```
+创建实例说明后, 将它们上载到 gpu 缓冲区中。查询内存要求时, 将此缓冲区引用为 tlas 输入。与 blas 一样, 查询内存需要使用 getretreinging装配结构预构建信息 (), 但使用类型 D3D12_RAYTRACING_ACCELERATION_ 结构 _ type _ top _ 水平指定 tlas 结构。接下来, 分配临时和结果缓冲区, 然后调用 "生成 raytracingas零1 ()" 来构建 tlas。与底层一样, 在顶级结果缓冲区上放置无人机屏障可确保在使用前完成加速结构构建。
+
+### 3.8.2 ROOT SIGNATURES
+与 c++ 中的函数签名类似, directx 12 根签名定义传递给着色器程序的参数。这些参数存储用于定位驻留在 gpu 内存中的资源 (如缓冲区、纹理或常量) 的信息。dxr 根签名来自现有的 directx 根签名, 但有两个显著的更改。首先, 光线跟踪着色器可以使用本地或全局根签名。本地根签名从 dxr 着色器表中提取数据 (请参阅第3.10 节), 并使用 D3D12_ROOT_SIGNATURE_ flag _ local _ root _ 签名标志初始化 D3D12_ROOT_SIGNATURE_DESC 结构。此标志仅适用于光线跟踪, 因此请避免将其与其他签名标志组合。directx 命令列表中的全局根签名源数据不需要特殊标志, 并且可以在图形、计算和光线跟踪之间共享。本地签名和全局签名之间的区别对于分离具有不同更新速率的资源 (例如, 每个基元与每个帧) 非常有用。
+其次, 所有光线跟踪着色器都应使用本地或全局根签名, 将 D3D12_SHADER_VISIBILITY_ALL 用于 D3D12_ROOT_PARAMETER 中的可见性参数。当光线跟踪根签名与计算共享命令列表状态时, 所有光线跟踪着色器始终可以看到本地根参数。不可能进一步缩小能见度。
+### 3.8.3
+在构建加速结构并定义根签名后, 使用 directx 着色器编译器 (dxc) 加载和编译着色器 [7]。使用各种帮助程序初始化编译器:
+
+```
+dxc::DxcDllSupport dxcHelper;
+IDxcCompiler* compiler;
+IDxcLibrary* library;
+CComPtr<IDxcIncludeHandler> dxcIncludeHandler;
+
+dxcHelper.Initialize();
+dxcHelper.CreateInstance(CLSID_DxcCompiler, &compiler);
+dxcHelper.CreateInstance(CLSID_DxcLibrary, &library);
+library->CreateIncludeHandler(&dxcIncludeHandler);
+```
+接下来，使用IDxcLibrary类加载着色器源代码。此助手类编译着色器代码；指定lib_6_3作为目标配置文件。编译DirectX中间语言(DXIL)字节码获取存储在IDxcBlob中的信息，稍后将使用IDxcBlob设置射线跟踪管道状态对象。由于大多数应用程序使用许多着色器，将编译封装到辅助函数中是有用的。我们在以下几个方面展示这样的功能及其用法：
+```
+void CompileShader(IDxcLibrary* lib, IDxcCompiler* comp,
+	LPCWSTR fileName, IDxcBlob** blob)
+{
+	UINT32 codePage(0);
+	IDxcBlobEncoding* pShaderText(nullptr);
+	IDxcOperationResult* result;
+
+	// Load and encode the shader file.
+	lib->CreateBlobFromFile(fileName, &codePage, &pShaderText);
+
+	// Compile shader; "main" is where execution starts.
+	comp->Compile(pShaderText, fileName, L"main", "lib_6_3",
+		nullptr, 0, nullptr, 0, dxcIncludeHandler, &result);
+
+	// Get the shader bytecode result.
+	result->GetResult(blob);
+}
+
+// Compiled shader DXIL bytecode
+IDxcBlob *rgsBytecode, *missBytecode, *chsBytecode, *ahsBytecode;
+
+// Call our helper function to compile the ray tracing shaders.
+CompileShader(library, compiler, L"RayGen.hlsl", &rgsBytecode);
+CompileShader(library, compiler, L"Miss.hlsl", &missBytecode);
+CompileShader(library, compiler, L"ClosestHit.hlsl", &chsBytecode);
+CompileShader(library, compiler, L"AnyHit.hlsl", &ahsBytecode);
+
+```
 ## 3.9	Ray Tracing Pipeline State Objects
 
 ## 3.10	Shader Tables
+着色表是64位对齐GPU内存的连续块，包含射线跟踪、着色器数据和场景资源绑定。如图3-3所示，着色器表中充满了着色器记录。RDSShader记录包含由着色器的本地根签名定义的唯一着色器标识符和根参数。阴影标识符是RTPSO生成的32位数据块，用作指向着色器或击中组的指针。由于着色器表只是由应用程序直接拥有和修改的GPU内存，它们的布局和组织非常灵活。因此，如图3-3所示，组织结构只是在着色表中排列记录的多种方式之一。
 
+在射线遍历过程中生成着色器时，查询着色器表，读取着色器记录以定位着色器代码和资源。例如，如果射线在遍历后忽略了所有的几何图形g加速结构，DirectX使用着色器表定位着色器来调用。对于缺失着色器，索引计算为第一个缺失着色器的地址加上着色器记录str。IDE倍于小姐着色指数。这是写成
+
+
+
+在HLSL中，缺失着色器索引IMIT作为TraceRay()的参数提供。在为命中组选择着色器记录时(即交叉、最近命中和任意命中着色的组合)，计算更复杂：
+
+```
+# define TO_DESC(x)(*reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(x))
+ID3D12Resource* shdrTable;
+ID3D12DescriptorHeap* heap;
+
+// Copy shader records to the shader table GPU buffer.
+uint8_t* pData;
+HRESULT hr = shdrTable->Map(0, nullptr, (void**)&pData);
+
+// [ Shader Record 0]
+// Set the ray generation shader identifier.
+memcpy(pData, rtpsoInfo->GetShaderIdentifier(L"Unqiue_RGS_Name"));
+
+// Set the ray generation shader's data from the local root signature.
+TO_DESC(pData + 32) = heap->GetGPUDescriptorHandleForHeapStart();
+
+// [Shader Record 1]
+// Set the miss shader identifier (no local root arguments to set).
+pData += shaderRecordSize;
+memcpy(pData, rtpsoInfo->GetShaderIdentifier(L"Unqiue_Miss_Name"));
+
+// [Shader Record 2]
+// Set the closest -hit shader identifier.
+pData += shaderRecordSize;
+memcpy(pData, rtpsoInfo->GetShaderIdentifier(L"HitGroup_Name"));
+
+// Set the hit group's data from the local root signature.
+TO_DESC(pData + 32) = heap->GetGPUDescriptorHandleForHeapStart();
+
+shdrTable->Unmap(0, nullptr);
+```
+着色表存储在应用程序拥有的GPU内存中，这提供了很大的灵活性.例如，可以优化资源和着色器更新，使其能够按需要访问尽可能少的着色器记录，或者基于应用程序的更新策略，甚至是双缓冲或三缓冲
 ## 3.11	调度光线
 完成3.8-3.10节中的步骤后，我们终于可以追踪光线了。 由于着色器表具有任意，灵活的布局，我们需要在光线跟踪开始之前使用D3D12 DISPATCH RAYS DESC描述我们的表。 此结构指向着色器表GPU内存，并指定要使用的光线生成着色器，错过着色器和命中组。 此信息使DXR运行时能够计算着色器表记录索引（在第3.7.1和3.10节中描述）。
 
